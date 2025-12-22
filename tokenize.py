@@ -35,7 +35,7 @@ class Tokenizer:
     def get_token_pair_count_and_merge(self, token_count_dict):
         sorted_count_dict = dict(sorted(token_count_dict.items(), key=lambda item: item[1], reverse=True))
         token_with_most_appr = list(sorted_count_dict.keys())[0]
-        merged_token = token_with_most_appr[0] + token_with_most_appr[1]
+        merged_token = token_with_most_appr[0] + "," + token_with_most_appr[1]
         return token_with_most_appr, merged_token
 
     def update_tokenization_dict(self, tokenized_words_dict, token_appr_dict, token_with_most_appr, merged_token):
@@ -73,10 +73,13 @@ class Tokenizer:
         final_list_of_tokens = list(set(final_list_of_tokens))
         for idx, t in enumerate(final_list_of_tokens):
             vocab[t] = idx
-        print(f"Vocab size: {len(final_list_of_tokens)}")
-        return vocab
+        # print(f"Vocab size: {len(final_list_of_tokens)}")
+        return vocab, tokens_merged_track
 
     def save_vocab(self, text, n):
-        vocab = self.get_token_ids_and_vocab(text, n)
+        vocab, tokens_merged_track = self.get_token_ids_and_vocab(text, n)
         with open("vocab.json", "w", encoding="utf-8") as f:
             json.dump(vocab, f, ensure_ascii=False, indent=2)
+        with open("merge2.txt", "w") as m:
+            for merge in tokens_merged_track:
+                m.write(merge + "\n")
