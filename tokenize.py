@@ -35,8 +35,8 @@ class Tokenizer:
     def get_token_pair_count_and_merge(self, token_count_dict):
         sorted_count_dict = dict(sorted(token_count_dict.items(), key=lambda item: item[1], reverse=True))
         token_with_most_appr = list(sorted_count_dict.keys())[0]
-        merged_token = token_with_most_appr[0] + "," + token_with_most_appr[1]
-        return token_with_most_appr, merged_token
+        merged_token = token_with_most_appr[0] + token_with_most_appr[1]
+        return token_with_most_appr, merged_token, (token_with_most_appr[0], token_with_most_appr[1])
 
     def update_tokenization_dict(self, tokenized_words_dict, token_appr_dict, token_with_most_appr, merged_token):
         words_seen_track = []
@@ -58,9 +58,9 @@ class Tokenizer:
         tokens_merged_track = []
         for i in range(n):
             token_count_dict, token_appr_dict = self.get_token_count_and_appr(tokenized_words_dict)
-            token_with_most_appr, merged_token = self.get_token_pair_count_and_merge(token_count_dict)
+            token_with_most_appr, merged_token, (tok1, tok2) = self.get_token_pair_count_and_merge(token_count_dict)
             tokenized_words_dict = self.update_tokenization_dict(tokenized_words_dict, token_appr_dict, token_with_most_appr, merged_token)
-            tokens_merged_track.append(merged_token)
+            tokens_merged_track.append((tok1, tok2))
         return tokenized_words_dict, tokens_merged_track
 
     def get_token_ids_and_vocab(self, text, n):
@@ -80,6 +80,34 @@ class Tokenizer:
         vocab, tokens_merged_track = self.get_token_ids_and_vocab(text, n)
         with open("vocab.json", "w", encoding="utf-8") as f:
             json.dump(vocab, f, ensure_ascii=False, indent=2)
-        with open("merge2.txt", "w") as m:
+        with open("merge.txt", "w") as m:
             for merge in tokens_merged_track:
-                m.write(merge + "\n")
+                m.write(merge[0] + "<m>" + merge[1] + "\n")
+
+    def encode(self, text, vocab_path, merge_path):
+        final_merge_list = []
+        with open(vocab_path, "r") as v:
+            vocab = json.load(v)
+        with open(merge_path, "r") as f:
+            merge_order = f.read()
+        merge_order_list = merge_order.split()
+        for merge in merge_order_list:
+            final_merge_list.append(tuple(merge.split("<m>")))
+        for a, b in final_merge_list:
+            print(a, b)
+        words = text.split()
+        all_tokens = []
+
+        for word in words:
+            tokens = list(word) + ['</w>']
+
+            for a, b in final_merge_list:
+                i = 0
+                while i < len(tokens) - 1:
+                    if tokens[i] == a and tokens[i+1] == b:
+                        tokens[i:i+2] = [a + b]
+                    else:
+                        i += 1
+
+            all_tokens.extend(tokens)
+        return [vocab[t] for t in all_tokens]
