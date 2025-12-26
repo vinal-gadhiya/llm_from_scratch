@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from tokenize import Tokenizer
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):
@@ -18,7 +19,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
     
     def forward(self, x):
-        return x + self.pe[:x.size(0), :]
+        return x + self.pe[:len(x), :]
 
 
 class TransformerAttention(nn.Module):
@@ -106,17 +107,21 @@ class TransformerDecoderBlock(nn.Module):
 
 
 class TransformersDecoder(nn.Module):
-    def __init__(self, d_model, num_heads, hidden_layer_dim, num_blocks):
+    def __init__(self, num_embedding, d_model, num_heads, hidden_layer_dim, num_blocks):
         super().__init__()
         self.d_model = d_model
         self.num_heads = num_heads
         self.hidden_layer_dim = hidden_layer_dim
         self.num_blocks = num_blocks
+        self.positional_encoding_layer = PositionalEncoding(d_model, max_len=1000)
+        self.embedding_layer = nn.Embedding(num_embeddings=num_embedding, embedding_dim=d_model)
 
         self.decoder_blocks = nn.ModuleList([TransformerDecoderBlock(self.d_model, self.num_heads, self.hidden_layer_dim) for _ in range(self.num_blocks)])
 
     def forward(self, sequence):
-        decoder_block_output = sequence
+        sequence_embedding = self.embedding_layer(sequence)
+        final_embedding = self.positional_encoding_layer(sequence_embedding)
+        decoder_block_output = final_embedding
         for block in self.decoder_blocks:
             decoder_block_output = block(decoder_block_output)
         return decoder_block_output
