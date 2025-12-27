@@ -107,16 +107,18 @@ class TransformerDecoderBlock(nn.Module):
 
 
 class TransformersDecoder(nn.Module):
-    def __init__(self, num_embedding, d_model, num_heads, hidden_layer_dim, num_blocks):
+    def __init__(self, vocab_size, d_model, num_heads, hidden_layer_dim, num_blocks):
         super().__init__()
         self.d_model = d_model
         self.num_heads = num_heads
         self.hidden_layer_dim = hidden_layer_dim
         self.num_blocks = num_blocks
         self.positional_encoding_layer = PositionalEncoding(d_model, max_len=1000)
-        self.embedding_layer = nn.Embedding(num_embeddings=num_embedding, embedding_dim=d_model)
+        self.embedding_layer = nn.Embedding(num_embeddings=vocab_size, embedding_dim=d_model)
 
         self.decoder_blocks = nn.ModuleList([TransformerDecoderBlock(self.d_model, self.num_heads, self.hidden_layer_dim) for _ in range(self.num_blocks)])
+
+        self.projection_layer = nn.Linear(in_features=d_model, out_features=vocab_size)
 
     def forward(self, sequence):
         sequence_embedding = self.embedding_layer(sequence)
@@ -124,4 +126,5 @@ class TransformersDecoder(nn.Module):
         decoder_block_output = final_embedding
         for block in self.decoder_blocks:
             decoder_block_output = block(decoder_block_output)
-        return decoder_block_output
+        logits = self.projection_layer(decoder_block_output)
+        return logits
