@@ -1,3 +1,4 @@
+import re
 import json
 from collections import defaultdict
 
@@ -6,9 +7,9 @@ class Tokenizer:
         pass
 
     def get_list_of_unique_words(self, text):
-        list_of_words = text.split(" ")
+        # list_of_words = text.split(" ")
+        list_of_words = re.findall(r"\n|[^\s\n]+", text)
         list_of_unique_words = list(set(list_of_words))
-        # print(f"Total words: {len(list_of_words)}\nTotal unique words: {len(list_of_unique_words)}")
         return list_of_unique_words
 
     def split_all_words_characterwise(self, list_of_unique_words):
@@ -73,7 +74,6 @@ class Tokenizer:
         final_list_of_tokens = list(set(final_list_of_tokens))
         for idx, t in enumerate(final_list_of_tokens):
             vocab[t] = idx
-        # print(f"Vocab size: {len(final_list_of_tokens)}")
         return vocab, tokens_merged_track
 
     def save_vocab(self, text, n):
@@ -93,8 +93,6 @@ class Tokenizer:
         merge_order_list = merge_order.split()
         for merge in merge_order_list:
             final_merge_list.append(tuple(merge.split("<m>")))
-        for a, b in final_merge_list:
-            print(a, b)
         words = text.split()
         all_tokens = []
 
@@ -111,3 +109,12 @@ class Tokenizer:
 
             all_tokens.extend(tokens)
         return [vocab[t] for t in all_tokens]
+
+    def decode(self, encoded_tokens, vocab_path):
+        decoded_list = []
+        with open(vocab_path, "r") as v:
+            vocab = json.load(v)
+        vocab_reversed = {v: k for k, v in vocab.items()}
+        for token in encoded_tokens:
+            decoded_list.append(vocab_reversed[token])
+        return decoded_list
