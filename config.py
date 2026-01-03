@@ -1,3 +1,17 @@
+INPUT_FILE_PATH = "input.txt"
+VOCAB_PATH = "vocab.json"
+MERGE_PATH = "merge.txt"
+CHECKPOINT_DIR = "checkpoints/"
+
+N_TOKENIZER_TRAIN_STEPS = 1000
+
 VOCAB_SIZE = 1064
+D_MODEL = 512
+N_HEADS = 8
+HIDDEN_LAYER_DIM = 1024
+N_BLOCKS = 16
 SEQ_LEN = 1000
+N_TRAINING_ITERATIONS = 10000
+CHECKPOINT_INTERVAL = 1000
+LR = 1e-4
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

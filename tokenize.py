@@ -78,9 +78,9 @@ class Tokenizer:
 
     def save_vocab(self, text, n):
         vocab, tokens_merged_track = self.get_token_ids_and_vocab(text, n)
-        with open("vocab.json", "w", encoding="utf-8") as f:
+        with open(config.VOCAB_PATH, "w", encoding="utf-8") as f:
             json.dump(vocab, f, ensure_ascii=False, indent=2)
-        with open("merge.txt", "w") as m:
+        with open(config.MERGE_PATH, "w") as m:
             for merge in tokens_merged_track:
                 m.write(merge[0] + "<m>" + merge[1] + "\n")
 
