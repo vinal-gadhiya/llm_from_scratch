@@ -1,10 +1,10 @@
 import torch
 import os
-import config
 import torch.optim as optim
 
-from tokenize import Tokenizer
-from model import TransformersDecoder
+from core import config
+from core.tokenize import Tokenizer
+from core.model import TransformersDecoder
 from trainer import Trainer
 
 with open(config.INPUT_FILE_PATH, "r") as f:
