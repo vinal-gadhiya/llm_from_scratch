@@ -3,13 +3,15 @@ import random
 
 class Trainer:
     def __init__(self, model, config, optimizer, criterion):
-        self.model = model
         self.config = config
+        self.model = model.to(self.config.DEVICE)
         self.optimizer = optimizer
         self.criterion = criterion
         self.log_interval = 100
 
     def train_step(self, input_seq, target_seq):
+        input_seq = input_seq.to(self.config.DEVICE)
+        target_seq = target_seq.to(self.config.DEVICE)
         logits = self.model(input_seq)
         loss = self.criterion(
             logits.view(-1, self.config.VOCAB_SIZE),
@@ -23,9 +25,9 @@ class Trainer:
     def train_iterations(self, tokenized_text, num_iterations):
         running_loss = 0.0
         for step in range(1, num_iterations+1):
-            start_idx = random.randint(0, len(tokenized_text) - seq_len - 1)
-            input_seq = torch.tensor(tokenized_text[start_idx : start_idx + seq_len])
-            target_seq = torch.tensor(tokenized_text[start_idx + 1 : start_idx + seq_len + 1])
+            start_idx = random.randint(0, len(tokenized_text) - self.config.SEQ_LEN - 1)
+            input_seq = torch.tensor(tokenized_text[start_idx : start_idx + self.config.SEQ_LEN])
+            target_seq = torch.tensor(tokenized_text[start_idx + 1 : start_idx + self.config.SEQ_LEN + 1])
             step_loss = self.train_step(input_seq, target_seq)
             running_loss += step_loss
 
