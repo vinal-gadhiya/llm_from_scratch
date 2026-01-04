@@ -1,9 +1,12 @@
-INPUT_FILE_PATH = "input.txt"
-VOCAB_PATH = "vocab.json"
-MERGE_PATH = "merge.txt"
-CHECKPOINT_DIR = "checkpoints/"
+import torch
+from pathlib import Path
 
-N_TOKENIZER_TRAIN_STEPS = 1000
+CORE_DIR = Path(__file__).resolve().parent
+
+INPUT_FILE_PATH = CORE_DIR / "input.txt"
+VOCAB_PATH = CORE_DIR / "vocab.json"
+MERGE_PATH = CORE_DIR / "merge.txt"
+CHECKPOINT_DIR = CORE_DIR / "checkpoints"
 
 VOCAB_SIZE = 1064
 D_MODEL = 512

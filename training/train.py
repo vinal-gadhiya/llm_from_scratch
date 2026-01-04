@@ -3,9 +3,9 @@ import os
 import torch.optim as optim
 
 from core import config
-from core.tokenize import Tokenizer
+from core.tokenizer import Tokenizer
 from core.model import TransformersDecoder
-from trainer import Trainer
+from training.trainer import Trainer
 
 with open(config.INPUT_FILE_PATH, "r") as f:
     shakespere_text = f.read()

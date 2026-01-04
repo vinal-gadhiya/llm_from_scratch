@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from tokenize import Tokenizer
+from core.tokenizer import Tokenizer
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):
