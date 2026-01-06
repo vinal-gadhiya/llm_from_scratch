@@ -21,7 +21,8 @@ transformer_decoder = TransformersDecoder(vocab_size=config.VOCAB_SIZE,
                                             d_model=config.D_MODEL,
                                             num_heads=config.N_HEADS,
                                             hidden_layer_dim=config.HIDDEN_LAYER_DIM,
-                                            num_blocks=config.N_BLOCKS)
+                                            num_blocks=config.N_BLOCKS,
+                                            max_seq_len=config.SEQ_LEN)
 
 
 optimizer = optim.Adam(transformer_decoder.parameters(), lr=config.LR)

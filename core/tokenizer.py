@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 
 class Tokenizer:
-    def __init(self):
+    def __init__(self):
         pass
 
     def get_list_of_unique_words(self, text):

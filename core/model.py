@@ -23,10 +23,11 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
+    def __init__(self, d_model, num_heads, max_seq_len):
         super().__init__()
         self.d_model = d_model
         self.num_heads = num_heads
+        self.max_seq_len = max_seq_len
         self.head_dim = d_model // num_heads
 
         self.query_matrix = nn.Linear(d_model, d_model)
@@ -34,31 +35,88 @@ class TransformerAttention(nn.Module):
         self.value_matrix = nn.Linear(d_model, d_model)
         self.final_projection = nn.Linear(d_model, d_model)
 
+        self.key_cache = torch.empty(self.max_seq_len, self.num_heads, self.head_dim)
+        self.value_cache = torch.empty(self.max_seq_len, self.num_heads, self.head_dim)
+
+        self.sequence_index = 0
+    
+    def reset_cache(self):
+        self.sequence_index = 0
+
     def forward(self, sequence, attention_mask=None):
         sequence_length, model_dim = sequence.shape
-        q = self.query_matrix(sequence)
-        k = self.key_matrix(sequence)
-        v = self.value_matrix(sequence)
+        if self.training:
+            q = self.query_matrix(sequence)
+            k = self.key_matrix(sequence)
+            v = self.value_matrix(sequence)
 
-        q = q.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
-        v = v.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
-        k = k.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
+            q = q.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
+            v = v.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
+            k = k.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
 
-        q_k = torch.matmul(q, k.transpose(-1, -2))
-        q_k = q_k/math.sqrt(self.head_dim)
+            q_k = torch.matmul(q, k.transpose(-1, -2))
+            q_k = q_k/math.sqrt(self.head_dim)
 
-        if attention_mask is not None:
-            q_k = q_k + attention_mask
-        attention_score = F.softmax(q_k, dim=-1)
-        q_k_v = torch.matmul(attention_score, v)
+            if attention_mask is not None:
+                q_k = q_k + attention_mask
+            attention_score = F.softmax(q_k, dim=-1)
+            q_k_v = torch.matmul(attention_score, v)
 
-        q_k_v = q_k_v.transpose(0, 1).contiguous()
-        q_k_v = q_k_v.view(sequence_length, self.num_heads*self.head_dim)
+            q_k_v = q_k_v.transpose(0, 1).contiguous()
+            q_k_v = q_k_v.view(sequence_length, self.num_heads*self.head_dim)
 
-        attention_output = self.final_projection(q_k_v)
+            attention_output = self.final_projection(q_k_v)
 
 
-        return attention_output
+            return attention_output
+        else:
+            if self.sequence_index == 0:
+                q = self.query_matrix(sequence)
+                k = self.key_matrix(sequence)
+                v = self.value_matrix(sequence)
+
+                self.sequence_index = sequence_length
+
+                self.key_cache[0:sequence_length, :, :] = k.view(sequence_length, self.num_heads, self.head_dim)
+                self.value_cache[0:sequence_length, :, :] = v.view(sequence_length, self.num_heads, self.head_dim)
+
+                q = q.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
+                v = v.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
+                k = k.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
+
+            else:
+                q = self.query_matrix(sequence)
+                k_current = self.key_matrix(sequence)
+                v_current = self.value_matrix(sequence)
+
+
+                self.key_cache[self.sequence_index, :, :] = k_current.view(1, self.num_heads, self.head_dim).squeeze(0)
+                self.value_cache[self.sequence_index, :, :] = v_current.view(1, self.num_heads, self.head_dim).squeeze(0)
+
+                k = self.key_cache[0:self.sequence_index+1, :, :]
+                v = self.value_cache[0:self.sequence_index+1, :, :]
+
+                q = q.view(sequence_length, self.num_heads, self.head_dim).transpose(0, 1)
+                v = v.transpose(0, 1)
+                k = k.transpose(0, 1)
+
+                self.sequence_index += 1
+
+            q_k = torch.matmul(q.to(device), k.transpose(-1, -2).to(device))
+            q_k = q_k/math.sqrt(self.head_dim)
+
+            if attention_mask is not None:
+                q_k = q_k + attention_mask
+            attention_score = F.softmax(q_k, dim=-1)
+            q_k_v = torch.matmul(attention_score, v.to(device))
+
+            q_k_v = q_k_v.transpose(0, 1).contiguous()
+            q_k_v = q_k_v.view(sequence_length, self.num_heads*self.head_dim)
+
+            attention_output = self.final_projection(q_k_v)
+
+
+            return attention_output
 
 
 class NeuralNet(nn.Module):
@@ -77,13 +135,14 @@ class NeuralNet(nn.Module):
     
 
 class TransformerDecoderBlock(nn.Module):
-    def __init__(self, d_model, num_heads, hidden_layer_dim):
+    def __init__(self, d_model, num_heads, hidden_layer_dim, max_seq_len):
         super().__init__()
         self.d_model = d_model
         self.num_heads = num_heads
+        self.max_seq_len = max_seq_len
         self.hidden_layer_dim = hidden_layer_dim
 
-        self.transformer_attention = TransformerAttention(d_model=d_model, num_heads=num_heads)
+        self.transformer_attention = TransformerAttention(d_model=self.d_model, num_heads=self.num_heads, max_seq_len=self.max_seq_len)
         self.neural_net = NeuralNet(d_model=d_model, hidden_layer_dim=hidden_layer_dim)
 
         self.layer_normalization_attention = nn.LayerNorm(self.d_model)
@@ -107,16 +166,17 @@ class TransformerDecoderBlock(nn.Module):
 
 
 class TransformersDecoder(nn.Module):
-    def __init__(self, vocab_size, d_model, num_heads, hidden_layer_dim, num_blocks):
+    def __init__(self, vocab_size, d_model, num_heads, hidden_layer_dim, num_blocks, max_seq_len):
         super().__init__()
         self.d_model = d_model
         self.num_heads = num_heads
         self.hidden_layer_dim = hidden_layer_dim
         self.num_blocks = num_blocks
+        self.max_seq_len = max_seq_len
         self.positional_encoding_layer = PositionalEncoding(d_model, max_len=1000)
         self.embedding_layer = nn.Embedding(num_embeddings=vocab_size, embedding_dim=d_model)
 
-        self.decoder_blocks = nn.ModuleList([TransformerDecoderBlock(self.d_model, self.num_heads, self.hidden_layer_dim) for _ in range(self.num_blocks)])
+        self.decoder_blocks = nn.ModuleList([TransformerDecoderBlock(self.d_model, self.num_heads, self.hidden_layer_dim, self.max_seq_len) for _ in range(self.num_blocks)])
 
         self.projection_layer = nn.Linear(in_features=d_model, out_features=vocab_size)
 
