@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from core import config
 from core.tokenizer import Tokenizer
 
 class PositionalEncoding(nn.Module):
@@ -102,13 +103,13 @@ class TransformerAttention(nn.Module):
 
                 self.sequence_index += 1
 
-            q_k = torch.matmul(q.to(device), k.transpose(-1, -2).to(device))
+            q_k = torch.matmul(q.to(config.DEVICE), k.transpose(-1, -2).to(config.DEVICE))
             q_k = q_k/math.sqrt(self.head_dim)
 
             if attention_mask is not None:
                 q_k = q_k + attention_mask
             attention_score = F.softmax(q_k, dim=-1)
-            q_k_v = torch.matmul(attention_score, v.to(device))
+            q_k_v = torch.matmul(attention_score, v.to(config.DEVICE))
 
             q_k_v = q_k_v.transpose(0, 1).contiguous()
             q_k_v = q_k_v.view(sequence_length, self.num_heads*self.head_dim)
@@ -153,6 +154,9 @@ class TransformerDecoderBlock(nn.Module):
         mask = torch.triu(torch.ones(sequence_length, sequence_length, device=device), diagonal=1)
         mask = mask.masked_fill(mask==1, float('-inf'))
         return mask
+    
+    def reset_cache(self):
+        self.transformer_attention.reset_cache()
 
     def forward(self, sequence):
         sequence_length, _ = sequence.size()
@@ -179,6 +183,10 @@ class TransformersDecoder(nn.Module):
         self.decoder_blocks = nn.ModuleList([TransformerDecoderBlock(self.d_model, self.num_heads, self.hidden_layer_dim, self.max_seq_len) for _ in range(self.num_blocks)])
 
         self.projection_layer = nn.Linear(in_features=d_model, out_features=vocab_size)
+    
+    def reset_cache(self):
+      for block in self.decoder_blocks:
+          block.reset_cache()
 
     def forward(self, sequence):
         sequence_embedding = self.embedding_layer(sequence)
