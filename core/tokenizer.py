@@ -8,7 +8,8 @@ class Tokenizer:
 
     def get_list_of_unique_words(self, text):
         # list_of_words = text.split(" ")
-        list_of_words = re.findall(r"\n|[^\s\n]+", text)
+        # list_of_words = re.findall(r"\n|[^\s\n]+", text)
+        list_of_words = re.findall(r"[^\s\n]+(?:\n)?", text)
         list_of_unique_words = list(set(list_of_words))
         return list_of_unique_words
 
@@ -40,17 +41,18 @@ class Tokenizer:
         return token_with_most_appr, merged_token, (token_with_most_appr[0], token_with_most_appr[1])
 
     def update_tokenization_dict(self, tokenized_words_dict, token_appr_dict, token_with_most_appr, merged_token):
-        words_seen_track = []
+        words_seen_track = {}
         for word in token_appr_dict[token_with_most_appr]:
             for k, v in word.items():
                 if k in words_seen_track:
-                    no_of_occurrence = words_seen_track.count(k)
+                    no_of_occurrence = words_seen_track[k]
                     tokenized_words_dict[k][v[0]-no_of_occurrence] = merged_token
                     del tokenized_words_dict[k][v[1]-no_of_occurrence]
+                    words_seen_track[k] += 1
                 else:
                     tokenized_words_dict[k][v[0]] = merged_token
                     del tokenized_words_dict[k][v[1]]
-                words_seen_track.append(k)
+                    words_seen_track[k] = 1
         return tokenized_words_dict
 
     def train_tokenizer_n_steps(self, text, n):
@@ -78,11 +80,13 @@ class Tokenizer:
 
     def save_vocab(self, text, n):
         vocab, tokens_merged_track = self.get_token_ids_and_vocab(text, n)
-        with open(config.VOCAB_PATH, "w", encoding="utf-8") as f:
+        with open("vocab.json", "w", encoding="utf-8") as f:
             json.dump(vocab, f, ensure_ascii=False, indent=2)
-        with open(config.MERGE_PATH, "w") as m:
+        with open("merge.txt", "w") as m:
             for merge in tokens_merged_track:
-                m.write(merge[0] + "<m>" + merge[1] + "\n")
+                token1 = merge[0].replace('\\', '\\\\').replace('\n', '\\n').replace('\t', '\\t')
+                token2 = merge[1].replace('\\', '\\\\').replace('\n', '\\n').replace('\t', '\\t')
+                m.write(token1 + "<m>" + token2 + "\n")
 
     def encode(self, text, vocab_path, merge_path):
         final_merge_list = []
@@ -92,7 +96,10 @@ class Tokenizer:
             merge_order = f.read()
         merge_order_list = merge_order.split()
         for merge in merge_order_list:
-            final_merge_list.append(tuple(merge.split("<m>")))
+            parts = merge.split("<m>")
+            token1 = parts[0].replace('\\n', '\n').replace('\\t', '\t').replace('\\\\', '\\')
+            token2 = parts[1].replace('\\n', '\n').replace('\\t', '\t').replace('\\\\', '\\')
+            final_merge_list.append((token1, token2))
         words = text.split()
         all_tokens = []
 
@@ -117,4 +124,8 @@ class Tokenizer:
         vocab_reversed = {v: k for k, v in vocab.items()}
         for token in encoded_tokens:
             decoded_list.append(vocab_reversed[token])
-        return decoded_list
+        
+        decoded_text = ''.join(decoded_list)
+        decoded_text = decoded_text.replace('</w>', ' ')
+        
+        return decoded_text

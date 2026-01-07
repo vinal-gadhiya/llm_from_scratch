@@ -1,3 +1,4 @@
+import json
 import torch
 from pathlib import Path
 
@@ -8,7 +9,11 @@ VOCAB_PATH = CORE_DIR / "vocab.json"
 MERGE_PATH = CORE_DIR / "merge.txt"
 CHECKPOINT_DIR = CORE_DIR / "checkpoints"
 
-VOCAB_SIZE = 1064
+with open(VOCAB_PATH, "r") as f:
+    vocab = json.load(f)
+
+N_TOKENIZER_TRAIN_STEPS = 1000
+VOCAB_SIZE = len(vocab)
 D_MODEL = 512
 N_HEADS = 8
 HIDDEN_LAYER_DIM = 1024
