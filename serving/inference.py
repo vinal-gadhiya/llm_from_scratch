@@ -6,27 +6,22 @@ from core import config
 from core.tokenizer import Tokenizer
 from core.model import TransformersDecoder
 
+from serving.main import model_state
 from serving.schemas import UserInput, ModelOutput
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-tokenizer = Tokenizer()
-transformer_model = TransformersDecoder(vocab_size=config.VOCAB_SIZE,
-                                            d_model=config.D_MODEL,
-                                            num_heads=config.N_HEADS,
-                                            hidden_layer_dim=config.HIDDEN_LAYER_DIM,
-                                            num_blocks=config.N_BLOCKS,
-                                            max_seq_len=config.SEQ_LEN)
-
-checkpoint_path = os.path.join(config.CHECKPOINT_DIR, "latest.pth")
-
-assert os.path.exists(checkpoint_path), f"Checkpoint not found: {checkpoint_path}"
-
-model_checkpoint = torch.load(checkpoint_path, map_location=config.DEVICE)
-transformer_model.load_state_dict(model_checkpoint['model'])
-
 @router.post("/model_inference", response_model=ModelOutput)
 def generate(request: UserInput):
+    if not model_state["loaded"]:
+        raise HTTPException(
+            status_code=503,
+            message=f"Model not loaded. Error: {model_state["error"]}"
+        )
+    
+    tokenizer = model_state["tokenizer"]
+    transformer_model = model_state["model"]
+    
     transformer_model.eval()
     transformer_model.reset_cache()
     input_text = request.user_input

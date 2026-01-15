@@ -5,9 +5,13 @@ RUN apt-get update && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 COPY serving/requirements.txt .
-
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY serving/ serving/
+COPY core/ core/
+
+ENV CHECKPOINT_PATH=/checkpoints/latest.pth
 
 EXPOSE 8000
 
-CMD ["uvicorn", "serving.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "serving.main:app", "--host", "0.0.0.0", "--port", "8000"]
