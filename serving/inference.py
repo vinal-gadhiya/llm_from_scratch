@@ -1,12 +1,12 @@
 import os
 import torch
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from core import config
 from core.tokenizer import Tokenizer
 from core.model import TransformersDecoder
 
-from serving.main import model_state
+from serving.state import model_state
 from serving.schemas import UserInput, ModelOutput
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -16,12 +16,12 @@ def generate(request: UserInput):
     if not model_state["loaded"]:
         raise HTTPException(
             status_code=503,
-            message=f"Model not loaded. Error: {model_state["error"]}"
+            detail=f"Model not loaded. Error: {model_state["error"]}"
         )
     
     tokenizer = model_state["tokenizer"]
     transformer_model = model_state["model"]
-    
+
     transformer_model.eval()
     transformer_model.reset_cache()
     input_text = request.user_input

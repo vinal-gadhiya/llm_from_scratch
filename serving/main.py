@@ -7,20 +7,13 @@ from core import config
 from core.tokenizer import Tokenizer
 from core.model import TransformersDecoder
 
-from serving import inference
-
-model_state = {
-    "tokenizer": None,
-    "model": None,
-    "loaded": False,
-    "error": None
-}
+from serving import inference, health
+from serving.state import model_state
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Loading model...")
     try:
-
         model_state["tokenizer"] = Tokenizer()
         model_state["model"] = TransformersDecoder(vocab_size=config.VOCAB_SIZE,
                                                     d_model=config.D_MODEL,
@@ -52,4 +45,5 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="LLM serving app", lifespan=lifespan)
 
+app.include_router(health.router)
 app.include_router(inference.router)
