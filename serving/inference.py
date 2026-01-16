@@ -16,7 +16,7 @@ def generate(request: UserInput):
     if not model_state["loaded"]:
         raise HTTPException(
             status_code=503,
-            detail=f"Model not loaded. Error: {model_state["error"]}"
+            detail=f"Model not loaded. Error: {model_state['error']}"
         )
     
     tokenizer = model_state["tokenizer"]
