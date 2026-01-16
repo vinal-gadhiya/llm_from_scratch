@@ -13,8 +13,8 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and run tests in container
-        run: docker build --target test -t llmserving:test .
+        run: docker build --target test -f serving/Dockerfile -t llmserving:test .
       
       - name: Build production image
         if: success()
-        run: docker build --target production -t llmserving:prod .
+        run: docker build --target production -f serving/Dockerfile -t llmserving:prod .

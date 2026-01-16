@@ -3,7 +3,7 @@ import torch
 from fastapi import APIRouter, HTTPException
 
 from core import config 
-from serving.state import state
+from serving.state import model_state
 
 router = APIRouter(tags=["health"])
 
