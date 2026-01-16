@@ -15,8 +15,8 @@ RUN pip install --no-cache-dir -r requirements-test.txt
 COPY core/ core/
 COPY serving/ serving/
 COPY tests/ tests/
-COPY tests/pytest.ini .
-RUN pytest tests/test_serving.py -v
+COPY pytest.ini .
+RUN pytest -v
 
 
 FROM base AS production
